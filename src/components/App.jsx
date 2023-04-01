@@ -1,37 +1,22 @@
+import { useSelector, useDispatch } from 'react-redux';
 import { useState, useEffect } from 'react';
-import { nanoid } from 'nanoid'
+import { nanoid } from 'nanoid';
 import CloseIcon from '@mui/icons-material/Close';
 import ContactForm from './contactForm';
-import Filter from './filter';
 import ContactList from './contactList';
-import baseContacts from '../resources/contacts.json';
-import{
-  TitleMain, 
-  TitleList,
-  CloseButton,
-} from './App.styled'
+import Filter from './filter';
 import Modal from './modal/Modal';
+import { TitleMain, TitleList, CloseButton } from './App.styled';
+import { getContacts } from '../redux/selectors';
+import { addContact, editContact } from '../redux/contactSlice';
 
-const CONTACTS = 'contacts';
-function App () {
-  const [contacts, setContacts ] = useState(() => {
-    const contactsString = localStorage.getItem(CONTACTS);
-    if (!JSON.parse(contactsString).length) {
-      localStorage.setItem(CONTACTS, JSON.stringify(baseContacts));
-      return baseContacts;
-    } else {
-      return JSON.parse(contactsString);
-    }
-  });
-  const [filter, setFilter ] = useState('');
-  const [id, setId ] = useState('');
-  const [name, setName ] = useState('');
-  const [number, setNumber ] = useState('');
-  const [showModal, setShowModal ] = useState(false);
-
-useEffect(() => {
-  localStorage.setItem(CONTACTS, JSON.stringify(contacts));
-}, [contacts])
+function App() {
+  const dispatch = useDispatch();
+  const [id, setId] = useState('');
+  const [name, setName] = useState('');
+  const [number, setNumber] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const contacts = useSelector(getContacts);
 
   const toggleModal = () => {
     setShowModal(!showModal);
@@ -64,31 +49,28 @@ useEffect(() => {
       validateExistContact({
         contacts,
         values,
-      }) && !showModal
+      }) &&
+      !showModal
     ) {
       return;
     }
-    let newContacts = [...contacts];
     if (id) {
-      newContacts = [
-        ...newContacts.filter(contact => contact.id !== id),
-        {
+      dispatch(
+        editContact({
           id,
           name: values.name,
           number: values.number,
-        },
-      ]
+        })
+      );
     } else {
-      newContacts = [
-        ...newContacts,
-        {
+      dispatch(
+        addContact({
           id: nanoid(),
           name: values.name,
           number: values.number,
-        },
-      ]
+        })
+      );
     }
-    setContacts(newContacts);
     setId('');
     setShowModal(false);
     actions.resetForm({
@@ -96,7 +78,7 @@ useEffect(() => {
       number: '',
     });
   };
-  
+
   const onContactEdit = id => {
     const currentContact = contacts.find(contact => contact.id === id);
     setShowModal(!showModal);
@@ -105,69 +87,46 @@ useEffect(() => {
     setNumber(currentContact.number);
   };
 
-  const onContactDelete = id => {
-    const newContacts = [...contacts];
-    setContacts(newContacts.filter(contact => contact.id !== id));
-  };
-
-  const handleFilter = event => {
-    setFilter(event.target.value);
-  };
-  
- const getVisibleContacts = () =>{
-  return contacts
-    .filter(contact => contact.name.toLowerCase()
-      .includes(filter.toLowerCase())
-      ||  contact.number.includes(filter));
- }
-
-    return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          fontSize: 40,
-          color: '#010101',
-        }}
-      >
-        {showModal && (
-          <Modal onClose={toggleModal}>
-            <CloseButton onClick={toggleModal}>
-              < CloseIcon/>
-            </CloseButton>
-            <ContactForm
-              contact={{
-                name, number
-              }}
-              handleSubmit={(values, actions) =>
-                handleSubmit(values, actions)
-              }
-            />
-          </Modal>
-        )}
-        <div>
-          {!showModal && (
-            <>
-              <TitleMain>Phonebook</TitleMain>
-              <ContactForm
-                handleSubmit={(values, actions) =>
-                  handleSubmit(values, actions)
-                }
-              />
-            </>
-          )}
-
-          <TitleList>Contacts</TitleList>
-          <Filter handleFilter={e => handleFilter(e)} />
-          <ContactList
-            contacts={getVisibleContacts()}
-            onContactEdit={id => onContactEdit(id)}
-            onContactDelete={id => onContactDelete(id)}
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        fontSize: 40,
+        color: '#010101',
+      }}
+    >
+      {showModal && (
+        <Modal onClose={toggleModal}>
+          <CloseButton onClick={toggleModal}>
+            <CloseIcon />
+          </CloseButton>
+          <ContactForm
+            contact={{
+              name,
+              number,
+            }}
+            handleSubmit={(values, actions) => handleSubmit(values, actions)}
           />
-        </div>
+        </Modal>
+      )}
+      <div>
+        {!showModal && (
+          <>
+            <TitleMain>Phonebook</TitleMain>
+            <ContactForm
+              handleSubmit={(values, actions) => handleSubmit(values, actions)}
+            />
+          </>
+        )}
+
+        <TitleList>Contacts</TitleList>
+        <Filter />
+        <ContactList onContactEdit={id => onContactEdit(id)} />
       </div>
-    );
+    </div>
+  );
 }
 
 export default App;
